@@ -1,0 +1,4 @@
+Revision history for Perl extension Plack::Middleware::ETag
+
+0.01    Sun Feb 28 10:25:01 2010
+        - original version
