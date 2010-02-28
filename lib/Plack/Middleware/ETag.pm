@@ -51,6 +51,12 @@ Plack::Middleware::ETag - Adds automatically an ETag header.
 
 Plack::Middleware::ETag adds automatically an ETag header. You may want to use it with C<Plack::Middleware::ConditionalGET>.
 
+  my $app = builder {
+    enable "Plack::Middleware::ConditionalGET";
+    enable "Plack::Middleware::ETag";
+    sub {['200', ['Content-Type' => 'text/html'}, ['hello world']]};
+  };
+
 =head1 AUTHOR
 
 franck cuny E<lt>franck@lumberjaph.netE<gt>
