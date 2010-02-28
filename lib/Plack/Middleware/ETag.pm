@@ -21,7 +21,7 @@ sub call {
             return unless defined $res->[2];
             return
                 if ( Plack::Util::header_exists( $headers, 'ETag' )
-                || $env->{REQUEST_METHOD} ne 'GET' );
+                || $env->{REQUEST_METHOD} !~ /^(GET|HEAD)$/ );
             my $sha     = Digest::SHA->new;
             my $content = $res->[2];
             $sha->add(@$content);
@@ -49,7 +49,7 @@ Plack::Middleware::ETag - Adds automatically an ETag header.
 
 =head1 DESCRIPTION
 
-Plack::Middleware::ETag adds automatically an ETag header.
+Plack::Middleware::ETag adds automatically an ETag header. You may want to use it with C<Plack::Middleware::ConditionalGET>.
 
 =head1 AUTHOR
 

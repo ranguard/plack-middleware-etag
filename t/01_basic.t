@@ -9,6 +9,7 @@ use Plack::Builder;
 use HTTP::Request::Common;
 
 my $content = [qw/hello world/];
+my $sha = Digest::SHA->new->add(@$content)->hexdigest;
 
 my $handler = builder {
     enable "Plack::Middleware::ETag";
@@ -25,6 +26,12 @@ my $second_handler = builder {
     };
 };
 
+my $unmodified_handler = builder {
+    enable "Plack::Middleware::ConditionalGET";
+    enable "Plack::Middleware::ETag";
+    sub { [ '200', [ 'Content-Type' => 'text/html' ], $content ] };
+};
+
 test_psgi
     app    => $handler,
     client => sub {
@@ -33,8 +40,7 @@ test_psgi
         my $req = GET "http://localhost/";
         my $res = $cb->($req);
         ok $res->header('ETag');
-        my $sha = Digest::SHA->new->add(@$content);
-        is $res->header('ETag'), $sha->hexdigest;
+        is $res->header('ETag'), $sha;
     }
 };
 
@@ -47,6 +53,19 @@ test_psgi
         my $res = $cb->($req);
         ok $res->header('ETag');
         is $res->header('ETag'), '123';
+    }
+};
+
+test_psgi
+    app    => $unmodified_handler,
+    client => sub {
+    my $cb = shift;
+    {
+        my $req = GET "http://localhost/", 'If-None-Match' => $sha;
+        my $res = $cb->($req);
+        ok $res->header('ETag');
+	is $res->code, 304;
+	ok !$res->content;
     }
 };
 
