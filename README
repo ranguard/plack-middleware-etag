@@ -1,27 +1,22 @@
-This is Perl module Plack::Middleware::ETag.
+NAME
+    Plack::Middleware::ETag - Adds automatically an ETag header.
 
-INSTALLATION
+SYNOPSIS
+      use Plack::Builder;
 
-Plack::Middleware::ETag installation is straightforward. If your CPAN shell is set up,
-you should just be able to do
+      my $app = builder {
+        enable "Plack::Middleware::ETag";
+        sub {['200', ['Content-Type' => 'text/html'}, ['hello world']]};
+      };
 
-    % cpan Plack::Middleware::ETag
+DESCRIPTION
+    Plack::Middleware::ETag adds automatically an ETag header.
 
-Download it, unpack it, then build it as per the usual:
+AUTHOR
+    franck cuny <franck@lumberjaph.net>
 
-    % perl Makefile.PL
-    % make && make test
+SEE ALSO
+LICENSE
+    This library is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
 
-Then install it:
-
-    % make install
-
-DOCUMENTATION
-
-Plack::Middleware::ETag documentation is available as in POD. So you can do:
-
-    % perldoc Plack::Middleware::ETag
-
-to read the documentation online with your favorite pager.
-
-franck cuny
