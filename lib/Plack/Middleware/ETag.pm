@@ -18,13 +18,10 @@ sub call {
         $res,
         sub {
             my $res = shift;
-            return unless defined $res->[2];
-            return
-                if ( Plack::Util::header_exists( $headers, 'ETag' )
-                || $env->{REQUEST_METHOD} !~ /^(GET|HEAD)$/ );
-            my $sha     = Digest::SHA->new;
-            my $content = $res->[2];
-            $sha->add(@$content);
+            return if ( !defined $res->[2] || ref $res->[2] ne 'ARRAY' );
+            return if ( Plack::Util::header_exists( $headers, 'ETag' ) );
+            my $sha = Digest::SHA->new;
+            $sha->add( @{ $res->[2] } );
             Plack::Util::header_set( $headers, 'ETag', $sha->hexdigest );
             return;
         }
