@@ -32,6 +32,12 @@ my $unmodified_handler = builder {
     sub { [ '200', [ 'Content-Type' => 'text/html' ], $content ] };
 };
 
+my $file_handler = builder {
+   enable "Plack::Middleware::ETag";
+   open my $fh, 'README';
+   sub {[200, ['Content-Type' => 'text/html', ], $fh]};
+};
+
 test_psgi
     app    => $handler,
     client => sub {
@@ -66,6 +72,20 @@ test_psgi
         ok $res->header('ETag');
 	is $res->code, 304;
 	ok !$res->content;
+    }
+};
+
+test_psgi
+    app    => $file_handler,
+    client => sub {
+    my $cb = shift;
+    {
+        my $req = GET "http://localhost/";
+        my $res = $cb->($req);
+        ok $res->header('ETag');
+	warn $res->header('ETag');
+	is $res->code, 200;
+	ok $res->content;
     }
 };
 

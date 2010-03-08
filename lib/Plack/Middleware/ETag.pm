@@ -3,6 +3,8 @@ package Plack::Middleware::ETag;
 use strict;
 use warnings;
 use Digest::SHA;
+use Plack::Util;
+use Plack::Util::Accessor qw( file_etag );
 
 our $VERSION = '0.01';
 
@@ -18,11 +20,36 @@ sub call {
         $res,
         sub {
             my $res = shift;
-            return if ( !defined $res->[2] || ref $res->[2] ne 'ARRAY' );
+            return if ( !defined $res->[2] );#|| ref $res->[2] ne 'ARRAY' );
             return if ( Plack::Util::header_exists( $headers, 'ETag' ) );
-            my $sha = Digest::SHA->new;
-            $sha->add( @{ $res->[2] } );
-            Plack::Util::header_set( $headers, 'ETag', $sha->hexdigest );
+            my $etag;
+            if ( Plack::Util::is_real_fh( $res->[2] ) ) {
+
+                my $file_attr = $self->file_etag || [qw/inode mtime size/];
+                my @stats = stat $res->[2];
+                if ( $stats[9] == time - 1 ) {
+                    # if the file was modified less than one second before the request
+                    # it may be modified in a near future, so we return a weak etag
+                    $etag = "W/";
+                }
+                if ( grep {/inode/} @$file_attr ) {
+                    $etag .= (sprintf "%x", $stats[2]);
+                }
+                if ( grep {/mtime/} @$file_attr ) {
+                    $etag .= "-" if ($etag && $etag !~ /-$/);
+                    $etag .= ( sprintf "%x", $stats[9] );
+                }
+                if ( grep {/size/} @$file_attr ) {
+                    $etag .= "-" if ($etag && $etag !~ /-$/);
+                    $etag .= ( sprintf "%x", $stats[7] );
+                }
+            }
+            else {
+                my $sha = Digest::SHA->new;
+                $sha->add( @{ $res->[2] } );
+                $etag = $sha->hexdigest;
+            }
+            Plack::Util::header_set( $headers, 'ETag', $etag );
             return;
         }
     );
@@ -40,7 +67,7 @@ Plack::Middleware::ETag - Adds automatically an ETag header.
   use Plack::Builder;
 
   my $app = builder {
-    enable "Plack::Middleware::ETag";
+    enable "Plack::Middleware::ETag", file_etag => [qw/inode mtime size/];
     sub {['200', ['Content-Type' => 'text/html'}, ['hello world']]};
   };
 
@@ -50,9 +77,21 @@ Plack::Middleware::ETag adds automatically an ETag header. You may want to use i
 
   my $app = builder {
     enable "Plack::Middleware::ConditionalGET";
-    enable "Plack::Middleware::ETag";
+    enable "Plack::Middleware::ETag", path => "", file_etag => "inode";
     sub {['200', ['Content-Type' => 'text/html'}, ['hello world']]};
   };
+
+=head2 CONFIGURATION
+
+=over 4
+
+=item file_etag
+
+If the content is a file handle, the ETag will be set using the inode, modified time and the file size. You can select which attributes of the file will be used to set the ETag:
+
+    enable "Plack::Middleware::ETag", file_etag => [qw/size/];
+
+=back
 
 =head1 AUTHOR
 
