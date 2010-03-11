@@ -11,15 +11,14 @@ our $VERSION = '0.01';
 use parent qw/Plack::Middleware/;
 
 sub call {
-    my ( $self, $env ) = @_;
-
-    my $res     = $self->app->($env);
-    my $headers = $res->[1];
+    my $self = shift;
+    my $res     = $self->app->(@_);
 
     $self->response_cb(
         $res,
         sub {
             my $res = shift;
+            my $headers = $res->[1];
             return if ( !defined $res->[2] );#|| ref $res->[2] ne 'ARRAY' );
             return if ( Plack::Util::header_exists( $headers, 'ETag' ) );
             my $etag;
