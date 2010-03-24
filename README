@@ -5,12 +5,27 @@ SYNOPSIS
       use Plack::Builder;
 
       my $app = builder {
-        enable "Plack::Middleware::ETag";
+        enable "Plack::Middleware::ETag", file_etag => [qw/inode mtime size/];
         sub {['200', ['Content-Type' => 'text/html'}, ['hello world']]};
       };
 
 DESCRIPTION
-    Plack::Middleware::ETag adds automatically an ETag header.
+    Plack::Middleware::ETag adds automatically an ETag header. You may want
+    to use it with "Plack::Middleware::ConditionalGET".
+
+      my $app = builder {
+        enable "Plack::Middleware::ConditionalGET";
+        enable "Plack::Middleware::ETag", file_etag => "inode";
+        sub {['200', ['Content-Type' => 'text/html'}, ['hello world']]};
+      };
+
+  CONFIGURATION
+    file_etag
+        If the content is a file handle, the ETag will be set using the
+        inode, modified time and the file size. You can select which
+        attributes of the file will be used to set the ETag:
+
+            enable "Plack::Middleware::ETag", file_etag => [qw/size/];
 
 AUTHOR
     franck cuny <franck@lumberjaph.net>
