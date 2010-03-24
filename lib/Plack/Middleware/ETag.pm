@@ -76,7 +76,7 @@ Plack::Middleware::ETag adds automatically an ETag header. You may want to use i
 
   my $app = builder {
     enable "Plack::Middleware::ConditionalGET";
-    enable "Plack::Middleware::ETag", path => "", file_etag => "inode";
+    enable "Plack::Middleware::ETag", file_etag => "inode";
     sub {['200', ['Content-Type' => 'text/html'}, ['hello world']]};
   };
 

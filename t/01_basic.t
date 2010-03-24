@@ -83,7 +83,6 @@ test_psgi
         my $req = GET "http://localhost/";
         my $res = $cb->($req);
         ok $res->header('ETag');
-	warn $res->header('ETag');
 	is $res->code, 200;
 	ok $res->content;
     }
