@@ -38,6 +38,17 @@ my $file_handler = builder {
    sub {[200, ['Content-Type' => 'text/html', ], $fh]};
 };
 
+my $cache_control = builder {
+    enable "Plack::Middleware::ETag", cache_control => 1;
+    sub { [ '200', [ 'Content-Type' => 'text/html' ], $content ] };
+};
+
+my $cache_control_array = builder {
+    enable "Plack::Middleware::ETag",
+      cache_control => [ 'must-revalidate', 'max-age=3600', 'no-store' ];
+    sub { [ '200', [ 'Content-Type' => 'text/html' ], $content ] };
+};
+
 test_psgi
     app    => $handler,
     client => sub {
@@ -87,5 +98,32 @@ test_psgi
 	ok $res->content;
     }
 };
+
+test_psgi
+  app    => $cache_control,
+  client => sub {
+    my $cb = shift;
+    {
+        my $req = GET "http://localhost/";
+        my $res = $cb->($req);
+        ok $res->header('ETag');
+        is $res->header('ETag'),          $sha;
+        is $res->header('Cache-Control'), 'must-revalidate';
+    }
+  };
+
+test_psgi
+  app    => $cache_control_array,
+  client => sub {
+    my $cb = shift;
+    {
+        my $req = GET "http://localhost/";
+        my $res = $cb->($req);
+        ok $res->header('ETag');
+        is $res->header('ETag'), $sha;
+        is $res->header('Cache-Control'),
+          'must-revalidate, max-age=3600, no-store';
+    }
+  };
 
 done_testing;

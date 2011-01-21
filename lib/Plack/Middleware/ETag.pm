@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Digest::SHA;
 use Plack::Util;
-use Plack::Util::Accessor qw( file_etag );
+use Plack::Util::Accessor qw( file_etag cache_control);
 
 our $VERSION = '0.01';
 
@@ -19,9 +19,11 @@ sub call {
         sub {
             my $res = shift;
             my $headers = $res->[1];
-            return if ( !defined $res->[2] );#|| ref $res->[2] ne 'ARRAY' );
+            return if ( !defined $res->[2] );
             return if ( Plack::Util::header_exists( $headers, 'ETag' ) );
+
             my $etag;
+
             if ( Plack::Util::is_real_fh( $res->[2] ) ) {
 
                 my $file_attr = $self->file_etag || [qw/inode mtime size/];
@@ -49,9 +51,23 @@ sub call {
                 $etag = $sha->hexdigest;
             }
             Plack::Util::header_set( $headers, 'ETag', $etag );
+            $self->_set_cache_control($headers);
             return;
         }
     );
+}
+
+sub _set_cache_control {
+    my ( $self, $headers ) = @_;
+    return unless $self->cache_control;
+
+    if ( ref $self->cache_control && ref $self->cache_control eq 'ARRAY' ) {
+        Plack::Util::header_set( $headers, 'Cache-Control',
+            join( ', ', @{ $self->cache_control } ) );
+    }
+    else {
+        Plack::Util::header_set( $headers, 'Cache-Control', 'must-revalidate' );
+    }
 }
 
 1;
@@ -89,6 +105,18 @@ Plack::Middleware::ETag adds automatically an ETag header. You may want to use i
 If the content is a file handle, the ETag will be set using the inode, modified time and the file size. You can select which attributes of the file will be used to set the ETag:
 
     enable "Plack::Middleware::ETag", file_etag => [qw/size/];
+
+=item cache_control
+
+It's possible to add 'Cache-Control' header.
+
+    enable "Plack::Middleware::ETag", cache_control => 1;
+
+Will add "Cache-Control: must-revalidate" to the headers.
+
+    enable "Plack::Middleware::ETag", cache_control => [ 'must-revalidate', 'max-age=3600' ];
+
+Will add "Cache-Control: must-revalidate, max-age=3600" to the headers.
 
 =back
 
