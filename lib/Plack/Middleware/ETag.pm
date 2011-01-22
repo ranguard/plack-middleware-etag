@@ -6,7 +6,7 @@ use Digest::SHA;
 use Plack::Util;
 use Plack::Util::Accessor qw( file_etag cache_control);
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use parent qw/Plack::Middleware/;
 
