@@ -38,6 +38,10 @@ DESCRIPTION
 
         Will add "Cache-Control: must-revalidate, max-age=3600" to the
         headers.
+        
+    check_last_modified_header
+
+        Will not add an ETag if there is already a Last-Modified header.
 
 AUTHOR
     franck cuny <franck@lumberjaph.net>
