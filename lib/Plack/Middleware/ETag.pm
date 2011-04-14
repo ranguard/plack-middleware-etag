@@ -4,23 +4,27 @@ use strict;
 use warnings;
 use Digest::SHA;
 use Plack::Util;
-use Plack::Util::Accessor qw( file_etag cache_control);
+use Plack::Util::Accessor
+    qw( file_etag cache_control check_last_modified_header);
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use parent qw/Plack::Middleware/;
 
 sub call {
     my $self = shift;
-    my $res     = $self->app->(@_);
+    my $res  = $self->app->(@_);
 
     $self->response_cb(
         $res,
         sub {
-            my $res = shift;
+            my $res     = shift;
             my $headers = $res->[1];
             return if ( !defined $res->[2] );
             return if ( Plack::Util::header_exists( $headers, 'ETag' ) );
+            return
+                if ( $self->check_last_modified_header()
+                && Plack::Util::header_exists( $headers, 'Last-Modified' ) );
 
             my $etag;
 
@@ -29,23 +33,23 @@ sub call {
                 my $file_attr = $self->file_etag || [qw/inode mtime size/];
                 my @stats = stat $res->[2];
                 if ( $stats[9] == time - 1 ) {
-                    # if the file was modified less than one second before the request
-                    # it may be modified in a near future, so we return a weak etag
+
+            # if the file was modified less than one second before the request
+            # it may be modified in a near future, so we return a weak etag
                     $etag = "W/";
                 }
                 if ( grep {/inode/} @$file_attr ) {
-                    $etag .= (sprintf "%x", $stats[2]);
+                    $etag .= ( sprintf "%x", $stats[2] );
                 }
                 if ( grep {/mtime/} @$file_attr ) {
-                    $etag .= "-" if ($etag && $etag !~ /-$/);
+                    $etag .= "-" if ( $etag && $etag !~ /-$/ );
                     $etag .= ( sprintf "%x", $stats[9] );
                 }
                 if ( grep {/size/} @$file_attr ) {
-                    $etag .= "-" if ($etag && $etag !~ /-$/);
+                    $etag .= "-" if ( $etag && $etag !~ /-$/ );
                     $etag .= ( sprintf "%x", $stats[7] );
                 }
-            }
-            else {
+            } else {
                 my $sha = Digest::SHA->new;
                 $sha->add( @{ $res->[2] } );
                 $etag = $sha->hexdigest;
@@ -64,9 +68,9 @@ sub _set_cache_control {
     if ( ref $self->cache_control && ref $self->cache_control eq 'ARRAY' ) {
         Plack::Util::header_set( $headers, 'Cache-Control',
             join( ', ', @{ $self->cache_control } ) );
-    }
-    else {
-        Plack::Util::header_set( $headers, 'Cache-Control', 'must-revalidate' );
+    } else {
+        Plack::Util::header_set( $headers, 'Cache-Control',
+            'must-revalidate' );
     }
 }
 
@@ -117,6 +121,10 @@ Will add "Cache-Control: must-revalidate" to the headers.
     enable "Plack::Middleware::ETag", cache_control => [ 'must-revalidate', 'max-age=3600' ];
 
 Will add "Cache-Control: must-revalidate, max-age=3600" to the headers.
+
+=item check_last_modified_header
+
+Will not add an ETag if there is already a Last-Modified header.
 
 =back
 

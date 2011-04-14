@@ -1,5 +1,10 @@
 Revision history for Perl extension Plack::Middleware::ETag
 
+0.03    Thu Apr 14 17:25:26 2011
+        - add check_last_modified_header (patch by Ranguard)
+        http://code.google.com/speed/page-speed/docs/caching.html#LeverageBrowserCaching
+        recommends not having both Last-Modified and ETag
+
 0.02    Sat Jan 22 10:22:50 2011
         - add cache-control as suggested by ingy and miyagawa
 
